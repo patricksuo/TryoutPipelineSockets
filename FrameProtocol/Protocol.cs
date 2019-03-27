@@ -53,7 +53,7 @@ namespace FrameProtocol
             while (true)
             {
                 ReadResult result = await _reader.ReadAsync(cancellation);
-                if (result.IsCompleted)
+                if (result.IsCompleted || result.IsCanceled)
                 {
                     return (null, 0);
                 }
