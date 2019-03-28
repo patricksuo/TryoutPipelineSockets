@@ -9,11 +9,15 @@ namespace RuntimeTracing
         protected override void OnEventSourceCreated(EventSource eventSource)
         {
             Console.WriteLine("OnEventSourceCreated {0} {1}", eventSource.Name, eventSource.Guid);
-            if (eventSource.Name != "Microsoft-Windows-DotNETRuntime")
+            if (eventSource.Name == "Microsoft-Windows-DotNETRuntime")
             {
+                EnableEvents(eventSource, EventLevel.Informational, (EventKeywords)0x10000);
                 return;
             }
-            EnableEvents(eventSource, EventLevel.Informational, (EventKeywords)0x10000);
+            if (eventSource.Name == "System.Diagnostics.Eventing.FrameworkEventSource")
+            {
+                EnableEvents(eventSource, EventLevel.LogAlways, (EventKeywords)0x0002);
+            }
         }
 
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
