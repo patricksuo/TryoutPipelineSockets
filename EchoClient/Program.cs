@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -46,6 +47,13 @@ namespace EchoClient
         public TimeSpan EchoDuration { get; private set; }
         public Exception Error { get; private set; }
 
+        public static long ConnectBeginCnt;
+        public static long ConnectFinishCnt;
+        public static long WriteBeginCnt;
+        public static long WriteFinishCnt;
+        public static long ReadFinishCnt;
+
+
 
         public SimsClient(EndPoint server, int echoRound, byte[] payload)
         {
@@ -57,7 +65,9 @@ namespace EchoClient
         public async Task Start()
         {
             _stopwatch.Start();
+            Interlocked.Increment(ref ConnectBeginCnt);
             SocketConnection conn = await SocketConnection.ConnectAsync(_server);
+            Interlocked.Increment(ref ConnectFinishCnt);
             ConnectDuration = _stopwatch.Elapsed;
 
             _stopwatch.Restart();
@@ -67,8 +77,11 @@ namespace EchoClient
 
                 for (int i = 0; i < _echoRound; i++)
                 {
+                    Interlocked.Increment(ref WriteBeginCnt);
                     await protocol.WriteAsync(_payload);
+                    Interlocked.Increment(ref WriteFinishCnt);
                     (var imo, var len) = await protocol.ReadAsync();
+                    Interlocked.Increment(ref ReadFinishCnt);
                     using (imo)
                     {
                         if (len != _payload.Length)
@@ -111,6 +124,19 @@ namespace EchoClient
             }
 
             RuntimeTracing.RuntimeEventListener listener = new RuntimeTracing.RuntimeEventListener();
+
+            listener.ThreadPoolWorkerThreadWait += () =>
+             {
+                 Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
+                     Interlocked.Read(ref listener.EnqueueCnt),
+                     Interlocked.Read(ref listener.DequeueCnt),
+                     Interlocked.Read(ref SimsClient.ConnectBeginCnt),
+                     Interlocked.Read(ref SimsClient.ConnectFinishCnt),
+                     Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                     Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                     Interlocked.Read(ref SimsClient.ReadFinishCnt)
+                     );
+             };
 
             SimsClient[] clients = new SimsClient[options.Clients];
             Task[] echoTasks = new Task[options.Clients];
@@ -178,6 +204,16 @@ namespace EchoClient
                    Percentile(total, 0.99),
                    Percentile(total, 0.999)
                    );
+
+            Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
+                Interlocked.Read(ref listener.EnqueueCnt),
+                Interlocked.Read(ref listener.DequeueCnt),
+                Interlocked.Read(ref SimsClient.ConnectBeginCnt),
+                Interlocked.Read(ref SimsClient.ConnectFinishCnt),
+                Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                Interlocked.Read(ref SimsClient.ReadFinishCnt)
+    );
         }
 
         public static double Percentile(double[] sequence, double excelPercentile)
@@ -186,8 +222,10 @@ namespace EchoClient
             int N = sequence.Length;
             double n = (N - 1) * excelPercentile + 1;
             // Another method: double n = (N + 1) * excelPercentile;
-            if (n == 1d) return sequence[0];
-            else if (n == N) return sequence[N - 1];
+            if (n == 1d)
+                return sequence[0];
+            else if (n == N)
+                return sequence[N - 1];
             else
             {
                 int k = (int)n;
