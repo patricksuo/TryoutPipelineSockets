@@ -157,21 +157,22 @@ namespace EchoClient
 
             double[] total = clients.Where(cli => cli.Error == null).Select(cli => cli.ConnectDuration.TotalMilliseconds + cli.EchoDuration.TotalMilliseconds).ToArray();
 
-            Console.WriteLine("connect\tp90:{0:N2}ms  p95:{1:N2}ms p99:{2:N2}ms p99.9:{3:N2}ms",
+
+            Console.WriteLine("connect\tp90:{0:N2}ms\tp95:{1:N2}ms\tp99:{2:N2}ms\tp99.9:{3:N2}ms",
                     Percentile(connect, 0.9),
                     Percentile(connect, 0.95),
                     Percentile(connect, 0.99),
                     Percentile(connect, 0.999)
                     );
 
-            Console.WriteLine("echo\tp90:{0:N2}ms  p95:{1}ms p99:{2}ms p99.9:{3}ms",
+            Console.WriteLine("echo\tp90:{0:N2}ms\tp95:{1:N2}ms\tp99:{2:N2}ms\tp99.9:{3:N2}ms",
                    Percentile(echo, 0.9),
                    Percentile(echo, 0.95),
                    Percentile(echo, 0.99),
                    Percentile(echo, 0.999)
                    );
 
-            Console.WriteLine("total\tp90:{0:N2}ms  p95:{1}ms p99:{2}ms p99.9:{3}ms",
+            Console.WriteLine("total\tp90:{0:N2}ms\tp95:{1:N2}ms\tp99:{2:N2}ms\tp99.9:{3:N2}ms",
                    Percentile(total, 0.9),
                    Percentile(total, 0.95),
                    Percentile(total, 0.99),
