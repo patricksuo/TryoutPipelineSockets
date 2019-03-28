@@ -23,9 +23,10 @@ namespace RuntimeTracing
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append((long)(eventData.TimeStamp -DateTimeOffset.UnixEpoch).TotalMilliseconds);
+            sb.Append((long)(eventData.TimeStamp -DateTimeOffset.UnixEpoch).TotalSeconds);
             sb.Append(" ");
             sb.Append(eventData.EventName);
+            sb.Append(" ");
             int i = 0;
             foreach(var payloadname in eventData.PayloadNames)
             {
