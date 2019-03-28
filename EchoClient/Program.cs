@@ -110,6 +110,7 @@ namespace EchoClient
                 return;
             }
 
+            RuntimeTracing.RuntimeEventListener listener = new RuntimeTracing.RuntimeEventListener();
 
             SimsClient[] clients = new SimsClient[options.Clients];
             Task[] echoTasks = new Task[options.Clients];
@@ -176,17 +177,6 @@ namespace EchoClient
                    Percentile(total, 0.99),
                    Percentile(total, 0.999)
                    );
-
-            //Histogram connectHistorgram = new Histogram(clients.Where(cli => cli.Error == null).Select(cli => cli.ConnectDuration.TotalMilliseconds), 10);
-            //Console.WriteLine("======= Connect========\r\n: {0}", connectHistorgram.ToString() );
-
-            //Histogram echoHistorgram = new Histogram(clients.Where(cli => cli.Error == null).Select(cli => cli.EchoDuration.TotalMilliseconds), 10);
-            //Console.WriteLine("======= Echo ========\r\n: {0}", echoHistorgram.ToString());
-
-
-            //Histogram totalHistorgram = new Histogram(clients.Where(cli => cli.Error == null).Select(cli => cli.ConnectDuration.TotalMilliseconds + cli.EchoDuration.TotalMilliseconds), 10);
-            //Console.WriteLine("======= Total ========\r\n: {0}", totalHistorgram.ToString());
-
         }
 
         public static double Percentile(double[] sequence, double excelPercentile)
