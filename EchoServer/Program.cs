@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.IO.Pipelines;
 using System.Buffers;
 using System.Net;
+using RuntimeTracing;
 
 namespace EchoServer
 {
@@ -69,6 +70,7 @@ namespace EchoServer
         {
             Options options = null;
 
+            RuntimeEventListener eventListener = new RuntimeEventListener();
 
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(_options =>

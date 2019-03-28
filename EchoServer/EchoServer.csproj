@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FrameProtocol\FrameProtocol.csproj" />
+    <ProjectReference Include="..\RuntimeTracing\RuntimeTracing.csproj" />
   </ItemGroup>
 
 </Project>
