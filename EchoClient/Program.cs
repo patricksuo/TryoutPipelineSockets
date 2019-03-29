@@ -40,7 +40,7 @@ namespace EchoClient
         public int Payload { get; set; }
 
         [Option('t', "type", Default = TestType.Pipeline, HelpText = "test type")]
-        public TestType testType { get; set; }
+        public TestType TransportType { get; set; }
 
         public static Options s_Current;
     }
@@ -107,7 +107,7 @@ namespace EchoClient
 
             for (int i = 0; i < options.Clients; i++)
             {
-                echoTasks[i] = clients[i].Start(options.testType);
+                echoTasks[i] = clients[i].Start(options.TransportType);
             }
             Task.WaitAll(echoTasks);
             stopwatch.Stop();
