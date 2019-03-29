@@ -92,7 +92,7 @@ namespace EchoClient
             {
                 listener.ThreadPoolWorkerThreadWait += () =>
                 {
-                    Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
+                    Console.WriteLine("==============> eq:{0} dq:{1} cnnBegin:{2} cnnFinish:{3} writeBegin:{4} writeFinish:{5} readFinish{6} {7}ms",
                         Interlocked.Read(ref RuntimeEventListener.s_enqueueCnt),
                         Interlocked.Read(ref RuntimeEventListener.s_dequeueCnt),
                         Interlocked.Read(ref EchoClient.s_connectBeginCnt),
@@ -147,16 +147,16 @@ namespace EchoClient
                    Percentile(total, 0.99),
                    Percentile(total, 0.999));
 
-            Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
-
-                Interlocked.Read(ref RuntimeEventListener.s_enqueueCnt),
+            Console.WriteLine("==============> eq:{0} dq:{1} cnnBegin:{2} cnnFinish:{3} writeBegin:{4} writeFinish:{5} readFinish{6} {7}ms",
+            Interlocked.Read(ref RuntimeEventListener.s_enqueueCnt),
                 Interlocked.Read(ref RuntimeEventListener.s_dequeueCnt),
                 Interlocked.Read(ref EchoClient.s_connectBeginCnt),
                 Interlocked.Read(ref EchoClient.s_connectFinishCnt),
                 Interlocked.Read(ref EchoClient.s_writeBeginCnt),
                 Interlocked.Read(ref EchoClient.s_writeBeginCnt),
-                Interlocked.Read(ref EchoClient.s_readFinishCnt)
-    );
+                Interlocked.Read(ref EchoClient.s_readFinishCnt),
+                stopwatch.ElapsedMilliseconds
+                );
         }
 
         public static double Percentile(double[] sequence, double excelPercentile)
