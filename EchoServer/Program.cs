@@ -23,47 +23,6 @@ namespace EchoServer
         public static Options s_Current;
     }
 
-    public class EchoServer : SocketServer
-    {
-        protected override Task OnClientConnectedAsync(in ClientConnection client)
-        {
-            return Echo(client.Transport);
-        }
-
-        private async Task Echo(IDuplexPipe transport)
-        {
-            FrameProtocol.FrameProtocol protocol = new FrameProtocol.FrameProtocol(transport);
-            try
-            {
-                while (true)
-                {
-                    (var buffer, var len) = await protocol.ReadAsync();
-                    if (len == 0)
-                    {
-                        return;
-                    }
-                    using (buffer)
-                    {
-                        await protocol.WriteAsync(buffer.Memory.Slice(0, (int)len));
-                    }
-                }
-            }
-            catch(Exception)
-            {
-
-            }
-            finally
-            {
-                transport.Output.Complete();
-            }
-
-        }
-
-
-
-    }
-
-
     class Program
     {
         static void Main(string[] args)
@@ -83,7 +42,7 @@ namespace EchoServer
                 return;
             }
 
-            EchoServer server = new EchoServer();
+            PipeEchoServer server = new PipeEchoServer();
             IPAddress address = IPAddress.Parse(options.Address);
             EndPoint endpoint = new IPEndPoint(address, options.Port);
 

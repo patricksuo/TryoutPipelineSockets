@@ -36,74 +36,6 @@ namespace EchoClient
         public static Options s_Current;
     }
 
-    public class SimsClient
-    {
-        private readonly EndPoint _server;
-        private readonly int _echoRound;
-        private readonly byte[] _payload;
-        private readonly Stopwatch _stopwatch = new Stopwatch();
-
-        public TimeSpan ConnectDuration { get; private set; }
-        public TimeSpan EchoDuration { get; private set; }
-        public Exception Error { get; private set; }
-
-        public static long ConnectBeginCnt;
-        public static long ConnectFinishCnt;
-        public static long WriteBeginCnt;
-        public static long WriteFinishCnt;
-        public static long ReadFinishCnt;
-
-
-
-        public SimsClient(EndPoint server, int echoRound, byte[] payload)
-        {
-            _server = server;
-            _echoRound = echoRound;
-            _payload = payload;
-        }
-
-        public async Task Start()
-        {
-            _stopwatch.Start();
-            Interlocked.Increment(ref ConnectBeginCnt);
-            SocketConnection conn = await SocketConnection.ConnectAsync(_server);
-            Interlocked.Increment(ref ConnectFinishCnt);
-            ConnectDuration = _stopwatch.Elapsed;
-
-            _stopwatch.Restart();
-            try
-            {
-                FrameProtocol.FrameProtocol protocol = new FrameProtocol.FrameProtocol(conn.Input, conn.Output);
-
-                for (int i = 0; i < _echoRound; i++)
-                {
-                    Interlocked.Increment(ref WriteBeginCnt);
-                    await protocol.WriteAsync(_payload);
-                    Interlocked.Increment(ref WriteFinishCnt);
-                    (var imo, var len) = await protocol.ReadAsync();
-                    Interlocked.Increment(ref ReadFinishCnt);
-                    using (imo)
-                    {
-                        if (len != _payload.Length)
-                        {
-                            throw new Exception("unexpect echo result");
-                        }
-                    }
-                }
-                EchoDuration = _stopwatch.Elapsed;
-            }
-            catch (Exception e)
-            {
-                Error = e;
-            }
-            finally
-            {
-                conn.Dispose();
-            }
-
-        }
-    }
-
     class Program
     {
         static void Main(string[] args)
@@ -130,15 +62,15 @@ namespace EchoClient
                  Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
                      Interlocked.Read(ref listener.EnqueueCnt),
                      Interlocked.Read(ref listener.DequeueCnt),
-                     Interlocked.Read(ref SimsClient.ConnectBeginCnt),
-                     Interlocked.Read(ref SimsClient.ConnectFinishCnt),
-                     Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                     Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                     Interlocked.Read(ref SimsClient.ReadFinishCnt)
+                     Interlocked.Read(ref PipeEchoClient.ConnectBeginCnt),
+                     Interlocked.Read(ref PipeEchoClient.ConnectFinishCnt),
+                     Interlocked.Read(ref PipeEchoClient.WriteBeginCnt),
+                     Interlocked.Read(ref PipeEchoClient.WriteBeginCnt),
+                     Interlocked.Read(ref PipeEchoClient.ReadFinishCnt)
                      );
              };
 
-            SimsClient[] clients = new SimsClient[options.Clients];
+            PipeEchoClient[] clients = new PipeEchoClient[options.Clients];
             Task[] echoTasks = new Task[options.Clients];
 
             Random r = new Random();
@@ -150,7 +82,7 @@ namespace EchoClient
 
             for (int i = 0; i < options.Clients; i++)
             {
-                clients[i] = new SimsClient(endpoint, options.Rounds, payload);
+                clients[i] = new PipeEchoClient(endpoint, options.Rounds, payload);
             }
 
             Stopwatch stopwatch = new Stopwatch();
@@ -165,7 +97,7 @@ namespace EchoClient
 
 
             int errorNum = 0;
-            foreach (SimsClient cli in clients)
+            foreach (PipeEchoClient cli in clients)
             {
                 if (cli.Error != null)
                 {
@@ -208,11 +140,11 @@ namespace EchoClient
             Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
                 Interlocked.Read(ref listener.EnqueueCnt),
                 Interlocked.Read(ref listener.DequeueCnt),
-                Interlocked.Read(ref SimsClient.ConnectBeginCnt),
-                Interlocked.Read(ref SimsClient.ConnectFinishCnt),
-                Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                Interlocked.Read(ref SimsClient.ReadFinishCnt)
+                Interlocked.Read(ref PipeEchoClient.ConnectBeginCnt),
+                Interlocked.Read(ref PipeEchoClient.ConnectFinishCnt),
+                Interlocked.Read(ref PipeEchoClient.WriteBeginCnt),
+                Interlocked.Read(ref PipeEchoClient.WriteBeginCnt),
+                Interlocked.Read(ref PipeEchoClient.ReadFinishCnt)
     );
         }
 
