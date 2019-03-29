@@ -93,13 +93,13 @@ namespace EchoClient
                 listener.ThreadPoolWorkerThreadWait += () =>
                 {
                     Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
-                        Interlocked.Read(ref RuntimeEventListener.EnqueueCnt),
-                        Interlocked.Read(ref RuntimeEventListener.DequeueCnt),
-                        Interlocked.Read(ref EchoClient.ConnectBeginCnt),
-                        Interlocked.Read(ref EchoClient.ConnectFinishCnt),
-                        Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                        Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                        Interlocked.Read(ref EchoClient.ReadFinishCnt),
+                        Interlocked.Read(ref RuntimeEventListener.s_enqueueCnt),
+                        Interlocked.Read(ref RuntimeEventListener.s_dequeueCnt),
+                        Interlocked.Read(ref EchoClient.s_connectBeginCnt),
+                        Interlocked.Read(ref EchoClient.s_connectFinishCnt),
+                        Interlocked.Read(ref EchoClient.s_writeBeginCnt),
+                        Interlocked.Read(ref EchoClient.s_writeBeginCnt),
+                        Interlocked.Read(ref EchoClient.s_readFinishCnt),
                         stopwatch.ElapsedMilliseconds
                         );
                 };
@@ -149,13 +149,13 @@ namespace EchoClient
 
             Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
 
-                Interlocked.Read(ref RuntimeEventListener.EnqueueCnt),
-                Interlocked.Read(ref RuntimeEventListener.DequeueCnt),
-                Interlocked.Read(ref EchoClient.ConnectBeginCnt),
-                Interlocked.Read(ref EchoClient.ConnectFinishCnt),
-                Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                Interlocked.Read(ref EchoClient.ReadFinishCnt)
+                Interlocked.Read(ref RuntimeEventListener.s_enqueueCnt),
+                Interlocked.Read(ref RuntimeEventListener.s_dequeueCnt),
+                Interlocked.Read(ref EchoClient.s_connectBeginCnt),
+                Interlocked.Read(ref EchoClient.s_connectFinishCnt),
+                Interlocked.Read(ref EchoClient.s_writeBeginCnt),
+                Interlocked.Read(ref EchoClient.s_writeBeginCnt),
+                Interlocked.Read(ref EchoClient.s_readFinishCnt)
     );
         }
 

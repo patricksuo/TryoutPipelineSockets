@@ -16,17 +16,17 @@ namespace EchoClient
         private readonly byte[] _payload;
         private readonly Stopwatch _stopwatch = new Stopwatch();
 
-        private FrameProtocol.FrameProtocol protocol;
+        private FrameProtocol.FrameProtocol _protocol;
 
         public TimeSpan ConnectDuration { get; private set; }
         public TimeSpan EchoDuration { get; private set; }
         public Exception Error { get; private set; }
 
-        public static long ConnectBeginCnt;
-        public static long ConnectFinishCnt;
-        public static long WriteBeginCnt;
-        public static long WriteFinishCnt;
-        public static long ReadFinishCnt;
+        public static long s_connectBeginCnt;
+        public static long s_connectFinishCnt;
+        public static long s_writeBeginCnt;
+        public static long s_writeFinishCnt;
+        public static long s_readFinishCnt;
 
         public EchoClient(EndPoint server, int echoRound, byte[] payload)
         {
@@ -37,7 +37,7 @@ namespace EchoClient
 
         public async Task Start(TestType testType)
         {
-            Interlocked.Increment(ref ConnectBeginCnt);
+            Interlocked.Increment(ref s_connectBeginCnt);
             SocketConnection conn = null;
             TcpClient client = null;
 
@@ -46,17 +46,17 @@ namespace EchoClient
                 case TestType.Pipeline:
                     _stopwatch.Start();
                     conn = await SocketConnection.ConnectAsync(_server);
-                    protocol = new PipeProtocol(conn.Input, conn.Output);
+                    _protocol = new PipeProtocol(conn.Input, conn.Output);
                     break;
                 case TestType.TcpSocket:
                     client = new TcpClient();
                     _stopwatch.Start();
                     await client.ConnectAsync(((IPEndPoint)_server).Address, ((IPEndPoint)_server).Port);
-                    protocol = new TcpProtocol(client.Client);
+                    _protocol = new TcpProtocol(client.Client);
                     break;
             }
 
-            Interlocked.Increment(ref ConnectFinishCnt);
+            Interlocked.Increment(ref s_connectFinishCnt);
             ConnectDuration = _stopwatch.Elapsed;
 
             _stopwatch.Restart();
@@ -64,11 +64,11 @@ namespace EchoClient
             {
                 for (int i = 0; i < _echoRound; i++)
                 {
-                    Interlocked.Increment(ref WriteBeginCnt);
-                    await protocol.WriteAsync(_payload);
-                    Interlocked.Increment(ref WriteFinishCnt);
-                    (var imo, var len) = await protocol.ReadAsync();
-                    Interlocked.Increment(ref ReadFinishCnt);
+                    Interlocked.Increment(ref s_writeBeginCnt);
+                    await _protocol.WriteAsync(_payload);
+                    Interlocked.Increment(ref s_writeFinishCnt);
+                    (var imo, var len) = await _protocol.ReadAsync();
+                    Interlocked.Increment(ref s_readFinishCnt);
                     using (imo)
                     {
                         if (len != _payload.Length)

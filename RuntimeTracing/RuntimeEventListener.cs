@@ -12,8 +12,8 @@ namespace RuntimeTracing
         public readonly TimeSpan ThreadPoolWorkerThreadWaitCD = TimeSpan.FromMilliseconds(10);
 
 
-        public static long EnqueueCnt;
-        public static long DequeueCnt;
+        public static long s_enqueueCnt;
+        public static long s_dequeueCnt;
 
         protected override void OnEventSourceCreated(EventSource eventSource)
         {
@@ -33,12 +33,12 @@ namespace RuntimeTracing
         {
             if (eventData.EventId == 30)
             {
-                Interlocked.Increment(ref EnqueueCnt);
+                Interlocked.Increment(ref s_enqueueCnt);
                 return;
             }
             if (eventData.EventId == 31)
             {
-                Interlocked.Increment(ref DequeueCnt);
+                Interlocked.Increment(ref s_dequeueCnt);
                 return;
             }
             StringBuilder sb = new StringBuilder();
