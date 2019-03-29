@@ -20,6 +20,10 @@ namespace EchoServer
         [Option('p', "port", Required = false, Default = 10008, HelpText = "listening port")]
         public int Port { get; set; }
 
+        [Option('v', "verbose", Required = false, Default = false, HelpText = "print verbose tracing log")]
+        public bool Verbose { get; set; }
+
+
         public static Options s_Current;
     }
 
@@ -69,8 +73,7 @@ namespace EchoServer
         static void Main(string[] args)
         {
             Options options = null;
-
-            RuntimeEventListener eventListener = new RuntimeEventListener();
+            RuntimeEventListener eventListener = null;
 
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(_options =>
@@ -81,6 +84,11 @@ namespace EchoServer
             if (options == null)
             {
                 return;
+            }
+
+            if (options.Verbose)
+            {
+                eventListener = new RuntimeEventListener();
             }
 
             EchoServer server = new EchoServer();

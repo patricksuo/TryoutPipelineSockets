@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
+using RuntimeTracing;
 
 namespace EchoClient
 {
@@ -29,6 +30,8 @@ namespace EchoClient
         [Option('r', "round", Required = false, Default = 2, HelpText = "echo round")]
         public int Rounds { get; set; }
 
+        [Option('v', "verbose", Required = false, Default = false, HelpText = "print verbose tracing log")]
+        public bool Verbose { get; set; }
 
         [Option('s', "payload", Required = false, Default = 64, HelpText = "payload size")]
         public int Payload { get; set; }
@@ -110,7 +113,7 @@ namespace EchoClient
         {
 
             Options options = null;
-
+            RuntimeEventListener listener = null;
 
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(_options =>
@@ -123,7 +126,10 @@ namespace EchoClient
                 return;
             }
 
-            RuntimeTracing.RuntimeEventListener listener = new RuntimeTracing.RuntimeEventListener();
+            if (options.Verbose)
+            {
+                listener = new RuntimeEventListener();
+            }
 
             SimsClient[] clients = new SimsClient[options.Clients];
             Task[] echoTasks = new Task[options.Clients];
@@ -144,19 +150,22 @@ namespace EchoClient
             stopwatch.Start();
 
 
-            listener.ThreadPoolWorkerThreadWait += () =>
+            if (listener != null)
             {
-                Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
-                    Interlocked.Read(ref listener.EnqueueCnt),
-                    Interlocked.Read(ref listener.DequeueCnt),
-                    Interlocked.Read(ref SimsClient.ConnectBeginCnt),
-                    Interlocked.Read(ref SimsClient.ConnectFinishCnt),
-                    Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                    Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                    Interlocked.Read(ref SimsClient.ReadFinishCnt),
-                    stopwatch.ElapsedMilliseconds
-                    );
-            };
+                listener.ThreadPoolWorkerThreadWait += () =>
+                {
+                    Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
+                        Interlocked.Read(ref RuntimeEventListener.EnqueueCnt),
+                        Interlocked.Read(ref RuntimeEventListener.DequeueCnt),
+                        Interlocked.Read(ref SimsClient.ConnectBeginCnt),
+                        Interlocked.Read(ref SimsClient.ConnectFinishCnt),
+                        Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                        Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                        Interlocked.Read(ref SimsClient.ReadFinishCnt),
+                        stopwatch.ElapsedMilliseconds
+                        );
+                };
+            }
 
 
             for (int i = 0; i < options.Clients; i++)
@@ -209,8 +218,8 @@ namespace EchoClient
                    );
 
             Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
-                Interlocked.Read(ref listener.EnqueueCnt),
-                Interlocked.Read(ref listener.DequeueCnt),
+                Interlocked.Read(ref RuntimeEventListener.EnqueueCnt),
+                Interlocked.Read(ref RuntimeEventListener.DequeueCnt),
                 Interlocked.Read(ref SimsClient.ConnectBeginCnt),
                 Interlocked.Read(ref SimsClient.ConnectFinishCnt),
                 Interlocked.Read(ref SimsClient.WriteBeginCnt),
