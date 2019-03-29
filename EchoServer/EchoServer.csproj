@@ -12,12 +12,12 @@
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.4.3" />
-    <PackageReference Include="Pipelines.Sockets.Unofficial" Version="2.0.7" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FrameProtocol\FrameProtocol.csproj" />
     <ProjectReference Include="..\RuntimeTracing\RuntimeTracing.csproj" />
+    <ProjectReference Include="..\thirdparty\Pipelines.Sockets.Unofficial\Pipelines.Sockets.Unofficial.csproj" />
   </ItemGroup>
 
 </Project>

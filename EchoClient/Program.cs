@@ -125,19 +125,6 @@ namespace EchoClient
 
             RuntimeTracing.RuntimeEventListener listener = new RuntimeTracing.RuntimeEventListener();
 
-            listener.ThreadPoolWorkerThreadWait += () =>
-             {
-                 Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
-                     Interlocked.Read(ref listener.EnqueueCnt),
-                     Interlocked.Read(ref listener.DequeueCnt),
-                     Interlocked.Read(ref SimsClient.ConnectBeginCnt),
-                     Interlocked.Read(ref SimsClient.ConnectFinishCnt),
-                     Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                     Interlocked.Read(ref SimsClient.WriteBeginCnt),
-                     Interlocked.Read(ref SimsClient.ReadFinishCnt)
-                     );
-             };
-
             SimsClient[] clients = new SimsClient[options.Clients];
             Task[] echoTasks = new Task[options.Clients];
 
@@ -155,6 +142,22 @@ namespace EchoClient
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
+
+
+            listener.ThreadPoolWorkerThreadWait += () =>
+            {
+                Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
+                    Interlocked.Read(ref listener.EnqueueCnt),
+                    Interlocked.Read(ref listener.DequeueCnt),
+                    Interlocked.Read(ref SimsClient.ConnectBeginCnt),
+                    Interlocked.Read(ref SimsClient.ConnectFinishCnt),
+                    Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                    Interlocked.Read(ref SimsClient.WriteBeginCnt),
+                    Interlocked.Read(ref SimsClient.ReadFinishCnt),
+                    stopwatch.ElapsedMilliseconds
+                    );
+            };
+
 
             for (int i = 0; i < options.Clients; i++)
             {
