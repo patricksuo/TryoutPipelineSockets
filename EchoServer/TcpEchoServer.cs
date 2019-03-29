@@ -45,8 +45,8 @@ namespace EchoServer
                 {
                     while (true)
                     {
-                        var buffer = await protocol.ReadAsync(cancel.Token);
-                        protocol.Write(buffer);
+                        (var buffer, var len) = await protocol.ReadAsync(cancel.Token);
+                        await protocol.WriteAsync(buffer.Memory.Slice(0, (int)len));
                     }
                 }
                 catch (Exception) { }

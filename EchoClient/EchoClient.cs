@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using FrameProtocol;
@@ -8,12 +9,14 @@ using Pipelines.Sockets.Unofficial;
 
 namespace EchoClient
 {
-    public class PipeEchoClient
+    public class EchoClient
     {
         private readonly EndPoint _server;
         private readonly int _echoRound;
         private readonly byte[] _payload;
         private readonly Stopwatch _stopwatch = new Stopwatch();
+
+        private FrameProtocol.FrameProtocol protocol;
 
         public TimeSpan ConnectDuration { get; private set; }
         public TimeSpan EchoDuration { get; private set; }
@@ -25,28 +28,38 @@ namespace EchoClient
         public static long WriteFinishCnt;
         public static long ReadFinishCnt;
 
-
-
-        public PipeEchoClient(EndPoint server, int echoRound, byte[] payload)
+        public EchoClient(EndPoint server, int echoRound, byte[] payload)
         {
             _server = server;
             _echoRound = echoRound;
             _payload = payload;
         }
 
-        public async Task Start()
+        public async Task Start(TestType testType)
         {
             _stopwatch.Start();
             Interlocked.Increment(ref ConnectBeginCnt);
-            SocketConnection conn = await SocketConnection.ConnectAsync(_server);
+            SocketConnection conn = null;
+            TcpClient client = null;
+
+            switch (testType)
+            {
+                case TestType.Pipeline:
+                    conn = await SocketConnection.ConnectAsync(_server);
+                    protocol = new PipeProtocol(conn.Input, conn.Output);
+                    break;
+                case TestType.TcpSocket:
+                    await client.ConnectAsync(((IPEndPoint)_server).Address, ((IPEndPoint)_server).Port);
+                    protocol = new TcpProtocol(client.Client);
+                    break;
+            }
+
             Interlocked.Increment(ref ConnectFinishCnt);
             ConnectDuration = _stopwatch.Elapsed;
 
             _stopwatch.Restart();
             try
             {
-                var protocol = new PipeProtocol(conn.Input, conn.Output);
-
                 for (int i = 0; i < _echoRound; i++)
                 {
                     Interlocked.Increment(ref WriteBeginCnt);
@@ -70,7 +83,8 @@ namespace EchoClient
             }
             finally
             {
-                conn.Dispose();
+                conn?.Dispose();
+                client?.Dispose();
             }
         }
     }

@@ -1,9 +1,7 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,43 +10,46 @@ namespace FrameProtocol
     public class TcpProtocol : FrameProtocol
     {
         private readonly Socket _socket;
-        private readonly byte[] _packetHead = new byte[PacketLengthSize];
-        private readonly ArrayPool<byte> allocator = ArrayPool<byte>.Shared;
+        private readonly MemoryPool<byte> allocator = MemoryPool<byte>.Shared;
 
         public TcpProtocol(Socket socket)
         {
             _socket = socket;
         }
 
-        private async Task readFull(byte[] buffer, int offset, int count, CancellationToken cancellation)
+        private async Task readFull(Memory<byte> buffer, CancellationToken cancellation)
         {
-            var recvBuf = new ArraySegment<byte>(buffer, offset, count);
+            var count = buffer.Length;
             while (count > 0)
             {
-                var n = await _socket.ReceiveAsync(recvBuf, SocketFlags.None);
+                var n = await _socket.ReceiveAsync(buffer, SocketFlags.None, cancellation);
                 if (n == 0)
                 {
                     throw new Exception("Remote Close the Socket");
                 }
-                offset += n;
                 count -= n;
-                recvBuf = recvBuf.Slice(n);
+                buffer = buffer.Slice(n);
             }
         }
 
-        public async Task<byte[]> ReadAsync(CancellationToken cancellation)
+        public override async Task<(IMemoryOwner<byte>, uint)> ReadAsync(CancellationToken cancellation)
         {
             while (true)
             {
-                await readFull(_packetHead, 0, PacketLengthSize, cancellation);
-                var bodyLen = BinaryPrimitives.ReadUInt32LittleEndian(_packetHead);
-                var packetBody = new byte[bodyLen];
-                await readFull(packetBody, 0, (int)bodyLen, cancellation);
-                return packetBody;
+                var headBuf = allocator.Rent(PacketLengthSize);
+                var head = headBuf.Memory.Slice(0, PacketLengthSize);
+                await readFull(head, cancellation);
+                var bodyLen = BinaryPrimitives.ReadUInt32LittleEndian(head.Span);
+                headBuf.Dispose();
+
+                var bodyBuf = MemoryPool<byte>.Shared.Rent((int)bodyLen);
+                var body = bodyBuf.Memory.Slice(0, (int)bodyLen);
+                await readFull(body, cancellation);
+                return (bodyBuf, bodyLen);
             }
         }
 
-        public void Write(byte[] data, CancellationToken cancellation = default)
+        public override async Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
         {
             int bodyLen = data.Length;
             if (bodyLen == 0 || bodyLen > MaxPacketSize)
@@ -57,31 +58,32 @@ namespace FrameProtocol
             }
 
             int totalSize = PacketLengthSize + bodyLen;
-            var buffer = allocator.Rent(totalSize);
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer, (uint)bodyLen);
-            data.CopyTo(buffer, PacketLengthSize);
+            var imo = MemoryPool<byte>.Shared.Rent(totalSize);
+            Memory<byte> buffer = imo.Memory.Slice(0, totalSize);
+            BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)bodyLen);
+            data.CopyTo(buffer.Slice(PacketLengthSize));
 
+            int sentCount = 0;
             try
             {
-                _socket.BeginSend(buffer, 0, totalSize, SocketFlags.None, (IAsyncResult ar) =>
+                while (!cancellation.IsCancellationRequested)
                 {
-                    try
+                    var n = await _socket.SendAsync(buffer, SocketFlags.None);
+                    sentCount += n;
+                    if (sentCount == totalSize)
                     {
-                        _socket.EndSend(ar);
+                        break;
                     }
-                    catch (Exception)
-                    {
-                        _socket.Close();
-                    }
-                    finally
-                    {
-                        allocator.Return(buffer);
-                    }
-                }, null);
+                    buffer = buffer.Slice(n);
+                }
             }
             catch (Exception)
             {
-                _socket.Close();
+
+            }
+            finally
+            {
+                imo.Dispose();
             }
         }
     }

@@ -1,14 +1,16 @@
 using CommandLine;
 using System;
-using Pipelines.Sockets.Unofficial;
-using System.Threading.Tasks;
-using System.IO.Pipelines;
-using System.Buffers;
 using System.Net;
 using RuntimeTracing;
 
 namespace EchoServer
 {
+    public enum TestType
+    {
+        Pipeline,
+        TcpSocket,
+    }
+
     public class Options
     {
         [Option('h', "help", Required = false, Default = false, HelpText = "print usage info and exit")]
@@ -19,6 +21,9 @@ namespace EchoServer
 
         [Option('p', "port", Required = false, Default = 10008, HelpText = "listening port")]
         public int Port { get; set; }
+
+        [Option('t', "type", Default = TestType.Pipeline, HelpText = "test type")]
+        public TestType testType { get; set; }
 
         public static Options s_Current;
     }
@@ -41,18 +46,27 @@ namespace EchoServer
             {
                 return;
             }
-
-            PipeEchoServer server = new PipeEchoServer();
             IPAddress address = IPAddress.Parse(options.Address);
             EndPoint endpoint = new IPEndPoint(address, options.Port);
 
-            server.Listen(endpoint);
-
+            switch (options.testType)
+            {
+                case TestType.Pipeline:
+                    {
+                        PipeEchoServer server = new PipeEchoServer();
+                        server.Listen(endpoint, listenBacklog: 5000);
+                    }
+                    break;
+                case TestType.TcpSocket:
+                    {
+                        TcpEchoServer server = new TcpEchoServer();
+                        server.Listen((IPEndPoint)endpoint, 5000);
+                    }
+                    break;
+            }
 
             Console.WriteLine("enter return to exit");
             Console.ReadLine();
-            server.Stop();
-
         }
     }
 }

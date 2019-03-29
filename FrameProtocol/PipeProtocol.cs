@@ -43,7 +43,7 @@ namespace FrameProtocol
             return true;
         }
 
-        public async Task<(IMemoryOwner<byte>, uint)> ReadAsync(CancellationToken cancellation = default)
+        public override async Task<(IMemoryOwner<byte>, uint)> ReadAsync(CancellationToken cancellation = default)
         {
             while (true)
             {
@@ -75,7 +75,7 @@ namespace FrameProtocol
             return result.AsTask();
         }
 
-        public Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
+        public override Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
         {
             WriteBuffer(in data);
             ValueTask<FlushResult> result = _writer.FlushAsync(cancellation);

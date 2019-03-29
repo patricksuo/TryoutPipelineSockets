@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace FrameProtocol
 {
-    public class FrameProtocol
+    public abstract class FrameProtocol
     {
         public const int PacketLengthSize = sizeof(uint);
         public const int MaxPacketSize = int.MaxValue;
@@ -18,5 +18,9 @@ namespace FrameProtocol
         {
             throw new Exception("FrameSizeException");
         }
+
+        public abstract Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default);
+
+        public abstract Task<(IMemoryOwner<byte>, uint)> ReadAsync(CancellationToken cancellation = default);
     }
 }
