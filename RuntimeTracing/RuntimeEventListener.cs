@@ -9,7 +9,7 @@ namespace RuntimeTracing
     {
         public Action ThreadPoolWorkerThreadWait;
         public DateTime ThreadPoolWorkerThreadWaitFireTime = DateTime.UtcNow;
-        public readonly TimeSpan ThreadPoolWorkerThreadWaitCD = TimeSpan.FromMilliseconds(100);
+        public readonly TimeSpan ThreadPoolWorkerThreadWaitCD = TimeSpan.FromMilliseconds(10);
 
 
         public long EnqueueCnt;
