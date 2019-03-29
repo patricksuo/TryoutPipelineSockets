@@ -42,7 +42,7 @@ namespace RuntimeTracing
                 return;
             }
             StringBuilder sb = new StringBuilder();
-            sb.Append((long)(eventData.TimeStamp -DateTimeOffset.UnixEpoch).TotalMilliseconds);
+            sb.Append((long)(eventData.TimeStamp -DateTimeOffset.UnixEpoch).TotalSeconds);
             sb.Append(" ");
             sb.Append(eventData.EventName);
             sb.Append(" ");
