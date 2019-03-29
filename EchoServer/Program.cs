@@ -1,14 +1,16 @@
 using CommandLine;
 using System;
-using Pipelines.Sockets.Unofficial;
-using System.Threading.Tasks;
-using System.IO.Pipelines;
-using System.Buffers;
 using System.Net;
 using RuntimeTracing;
 
 namespace EchoServer
 {
+    public enum TestType
+    {
+        Pipeline,
+        TcpSocket,
+    }
+
     public class Options
     {
         [Option('h', "help", Required = false, Default = false, HelpText = "print usage info and exit")]
@@ -20,53 +22,14 @@ namespace EchoServer
         [Option('p', "port", Required = false, Default = 10008, HelpText = "listening port")]
         public int Port { get; set; }
 
+        [Option('t', "type", Default = TestType.Pipeline, HelpText = "test type")]
+        public TestType testType { get; set; }
+
         [Option('v', "verbose", Required = false, Default = false, HelpText = "print verbose tracing log")]
         public bool Verbose { get; set; }
 
-
         public static Options s_Current;
     }
-
-    public class EchoServer : SocketServer
-    {
-        protected override Task OnClientConnectedAsync(in ClientConnection client)
-        {
-            return Echo(client.Transport);
-        }
-
-        private async Task Echo(IDuplexPipe transport)
-        {
-            FrameProtocol.FrameProtocol protocol = new FrameProtocol.FrameProtocol(transport);
-            try
-            {
-                while (true)
-                {
-                    (var buffer, var len) = await protocol.ReadAsync();
-                    if (len == 0)
-                    {
-                        return;
-                    }
-                    using (buffer)
-                    {
-                        await protocol.WriteAsync(buffer.Memory.Slice(0, (int)len));
-                    }
-                }
-            }
-            catch(Exception)
-            {
-
-            }
-            finally
-            {
-                transport.Output.Complete();
-            }
-
-        }
-
-
-
-    }
-
 
     class Program
     {
@@ -85,23 +48,32 @@ namespace EchoServer
             {
                 return;
             }
-
             if (options.Verbose)
             {
                 eventListener = new RuntimeEventListener();
             }
 
-            EchoServer server = new EchoServer();
             IPAddress address = IPAddress.Parse(options.Address);
             EndPoint endpoint = new IPEndPoint(address, options.Port);
 
-            server.Listen(endpoint, listenBacklog:5000);
-
+            switch (options.testType)
+            {
+                case TestType.Pipeline:
+                    {
+                        PipeEchoServer server = new PipeEchoServer();
+                        server.Listen(endpoint, listenBacklog: 5000);
+                    }
+                    break;
+                case TestType.TcpSocket:
+                    {
+                        TcpEchoServer server = new TcpEchoServer();
+                        server.Listen((IPEndPoint)endpoint, 5000);
+                    }
+                    break;
+            }
 
             Console.WriteLine("enter return to exit");
             Console.ReadLine();
-            server.Stop();
-
         }
     }
 }
