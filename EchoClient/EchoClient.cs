@@ -37,7 +37,6 @@ namespace EchoClient
 
         public async Task Start(TestType testType)
         {
-            _stopwatch.Start();
             Interlocked.Increment(ref ConnectBeginCnt);
             SocketConnection conn = null;
             TcpClient client = null;
@@ -45,10 +44,13 @@ namespace EchoClient
             switch (testType)
             {
                 case TestType.Pipeline:
+                    _stopwatch.Start();
                     conn = await SocketConnection.ConnectAsync(_server);
                     protocol = new PipeProtocol(conn.Input, conn.Output);
                     break;
                 case TestType.TcpSocket:
+                    client = new TcpClient();
+                    _stopwatch.Start();
                     await client.ConnectAsync(((IPEndPoint)_server).Address, ((IPEndPoint)_server).Port);
                     protocol = new TcpProtocol(client.Client);
                     break;

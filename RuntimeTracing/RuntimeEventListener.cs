@@ -12,8 +12,8 @@ namespace RuntimeTracing
         public readonly TimeSpan ThreadPoolWorkerThreadWaitCD = TimeSpan.FromMilliseconds(10);
 
 
-        public long EnqueueCnt;
-        public long DequeueCnt;
+        public static long EnqueueCnt;
+        public static long DequeueCnt;
 
         protected override void OnEventSourceCreated(EventSource eventSource)
         {

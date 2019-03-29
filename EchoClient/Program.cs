@@ -5,6 +5,8 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
+using System.Collections.Generic;
+using RuntimeTracing;
 
 namespace EchoClient
 {
@@ -31,6 +33,9 @@ namespace EchoClient
         [Option('r', "round", Required = false, Default = 2, HelpText = "echo round")]
         public int Rounds { get; set; }
 
+        [Option('v', "verbose", Required = false, Default = false, HelpText = "print verbose tracing log")]
+        public bool Verbose { get; set; }
+
         [Option('s', "payload", Required = false, Default = 64, HelpText = "payload size")]
         public int Payload { get; set; }
 
@@ -45,17 +50,25 @@ namespace EchoClient
         static void Main(string[] args)
         {
             Options options = null;
-            Parser.Default.ParseArguments<Options>(args).WithParsed(_options =>
-            {
-                options = _options;
-            });
+
+            RuntimeEventListener listener = null;
+
+            Parser.Default.ParseArguments<Options>(args)
+                .WithParsed(_options =>
+                {
+                    options = _options;
+                });
+
 
             if (options == null)
             {
                 return;
             }
 
-            RuntimeTracing.RuntimeEventListener listener = new RuntimeTracing.RuntimeEventListener();
+            if (options.Verbose)
+            {
+                listener = new RuntimeEventListener();
+            }
 
             EchoClient[] clients = new EchoClient[options.Clients];
             Task[] echoTasks = new Task[options.Clients];
@@ -75,19 +88,22 @@ namespace EchoClient
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            listener.ThreadPoolWorkerThreadWait += () =>
+            if (listener != null)
             {
-                Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
-                    Interlocked.Read(ref listener.EnqueueCnt),
-                    Interlocked.Read(ref listener.DequeueCnt),
-                    Interlocked.Read(ref EchoClient.ConnectBeginCnt),
-                    Interlocked.Read(ref EchoClient.ConnectFinishCnt),
-                    Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                    Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                    Interlocked.Read(ref EchoClient.ReadFinishCnt),
-                    stopwatch.ElapsedMilliseconds
-                    );
-            };
+                listener.ThreadPoolWorkerThreadWait += () =>
+                {
+                    Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6} {7}",
+                        Interlocked.Read(ref RuntimeEventListener.EnqueueCnt),
+                        Interlocked.Read(ref RuntimeEventListener.DequeueCnt),
+                        Interlocked.Read(ref EchoClient.ConnectBeginCnt),
+                        Interlocked.Read(ref EchoClient.ConnectFinishCnt),
+                        Interlocked.Read(ref EchoClient.WriteBeginCnt),
+                        Interlocked.Read(ref EchoClient.WriteBeginCnt),
+                        Interlocked.Read(ref EchoClient.ReadFinishCnt),
+                        stopwatch.ElapsedMilliseconds
+                        );
+                };
+            }
 
             for (int i = 0; i < options.Clients; i++)
             {
@@ -132,13 +148,15 @@ namespace EchoClient
                    Percentile(total, 0.999));
 
             Console.WriteLine("==============> {0} {1} {2} {3} {4} {5} {6}",
-                  Interlocked.Read(ref listener.EnqueueCnt),
-                  Interlocked.Read(ref listener.DequeueCnt),
-                  Interlocked.Read(ref EchoClient.ConnectBeginCnt),
-                  Interlocked.Read(ref EchoClient.ConnectFinishCnt),
-                  Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                  Interlocked.Read(ref EchoClient.WriteBeginCnt),
-                  Interlocked.Read(ref EchoClient.ReadFinishCnt));
+
+                Interlocked.Read(ref RuntimeEventListener.EnqueueCnt),
+                Interlocked.Read(ref RuntimeEventListener.DequeueCnt),
+                Interlocked.Read(ref EchoClient.ConnectBeginCnt),
+                Interlocked.Read(ref EchoClient.ConnectFinishCnt),
+                Interlocked.Read(ref EchoClient.WriteBeginCnt),
+                Interlocked.Read(ref EchoClient.WriteBeginCnt),
+                Interlocked.Read(ref EchoClient.ReadFinishCnt)
+    );
         }
 
         public static double Percentile(double[] sequence, double excelPercentile)

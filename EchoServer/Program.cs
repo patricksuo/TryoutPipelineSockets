@@ -25,6 +25,9 @@ namespace EchoServer
         [Option('t', "type", Default = TestType.Pipeline, HelpText = "test type")]
         public TestType testType { get; set; }
 
+        [Option('v', "verbose", Required = false, Default = false, HelpText = "print verbose tracing log")]
+        public bool Verbose { get; set; }
+
         public static Options s_Current;
     }
 
@@ -33,8 +36,7 @@ namespace EchoServer
         static void Main(string[] args)
         {
             Options options = null;
-
-            RuntimeEventListener eventListener = new RuntimeEventListener();
+            RuntimeEventListener eventListener = null;
 
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(_options =>
@@ -46,6 +48,11 @@ namespace EchoServer
             {
                 return;
             }
+            if (options.Verbose)
+            {
+                eventListener = new RuntimeEventListener();
+            }
+
             IPAddress address = IPAddress.Parse(options.Address);
             EndPoint endpoint = new IPEndPoint(address, options.Port);
 
