@@ -40,7 +40,10 @@ func main() {
 	wg.Add(g_clients)
 
 	payload := make([]byte, g_payload)
-	server := fmt.Sprintf("%s:%d", g_address, g_port)
+	serverAddress := &net.TCPAddr{
+		IP:  net.ParseIP(g_address),
+		Port: g_port,
+	}
 
 	begin := time.Now()
 	for i := 0; i < g_clients; i++ {
@@ -49,11 +52,11 @@ func main() {
 			buffer := make([]byte, 4+len(payload))
 
 			beginConn := time.Now()
-			conn, err := net.Dial("tcp", server)
+			conn, err := net.DialTCP("tcp", nil, serverAddress)
 			if err != nil {
 				panic(err)
 			}
-			conn.(*net.TCPConn).SetNoDelay(true)
+			conn.SetNoDelay(true)
 			defer conn.Close()
 			finishConn := time.Now()
 
