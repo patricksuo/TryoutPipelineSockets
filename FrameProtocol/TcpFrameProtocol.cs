@@ -18,12 +18,12 @@ namespace FrameProtocol
             _socket = socket;
         }
 
-        private async Task ReadFull(Memory<byte> buffer, CancellationToken cancellation)
+        private async Task ReadFull(Memory<byte> buffer, CancellationToken token)
         {
             var count = buffer.Length;
             while (count > 0)
             {
-                var n = await _socket.ReceiveAsync(buffer, SocketFlags.None, cancellation);
+                var n = await _socket.ReceiveAsync(buffer, SocketFlags.None, token);
                 if (n == 0)
                 {
                     ThrowEOS();
@@ -55,7 +55,7 @@ namespace FrameProtocol
             return default;
         }
 
-        public  override async Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
+        public  override async Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken token = default)
         {
             int bodyLen = data.Length;
             if (bodyLen == 0 || bodyLen > MaxPacketSize)
@@ -64,32 +64,26 @@ namespace FrameProtocol
             }
 
             int totalSize = PacketLengthSize + bodyLen;
-            IMemoryOwner<byte> imo = MemoryPool<byte>.Shared.Rent(totalSize);
-            Memory<byte> buffer = imo.Memory.Slice(0, totalSize);
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)bodyLen);
-            data.CopyTo(buffer.Slice(PacketLengthSize));
+            if (_buffer.Length < totalSize)
+            {
+                _buffer = new Memory<byte>(new byte[totalSize]); 
+            }
 
+            BinaryPrimitives.WriteUInt32LittleEndian(_buffer.Span, (uint)bodyLen);
+            data.CopyTo(_buffer.Slice(PacketLengthSize, bodyLen));
+
+            Memory<byte> buffer = _buffer.Slice(0, totalSize);
             int sentCount = 0;
-            try
-            {
-                while (!cancellation.IsCancellationRequested)
-                {
-                    var n = await _socket.SendAsync(buffer, SocketFlags.None);
-                    sentCount += n;
-                    if (sentCount == totalSize)
-                    {
-                        break;
-                    }
-                    buffer = buffer.Slice(n);
-                }
-            }
-            catch (Exception)
-            {
 
-            }
-            finally
+            while (!token.IsCancellationRequested)
             {
-                imo.Dispose();
+                var n = await _socket.SendAsync(buffer, SocketFlags.None);
+                sentCount += n;
+                if (sentCount == totalSize)
+                {
+                    return;
+                }
+                buffer = buffer.Slice(n);
             }
         }
     }
