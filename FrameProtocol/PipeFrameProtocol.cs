@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,6 +27,7 @@ namespace FrameProtocol
             _writer = writer;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryReadPacketBodyLen(in ReadOnlySequence<byte> buffer, out uint packetLength)
         {
             if (buffer.Length < PacketLengthSize)
@@ -46,11 +48,11 @@ namespace FrameProtocol
         }
 
 
-        public override async Task<ReadOnlyMemory<byte>> ReadAsync(CancellationToken cancellation = default)
+        public override async Task<ReadOnlyMemory<byte>> ReadAsync(CancellationToken token = default)
         {
-            while (!cancellation.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
-                ReadResult result = await _reader.ReadAsync(cancellation);
+                ReadResult result = await _reader.ReadAsync(token);
                 if (result.IsCompleted || result.IsCanceled)
                 {
                     return default;
@@ -72,7 +74,7 @@ namespace FrameProtocol
             return default;
         }
 
-        public override Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
+        public override Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken token = default)
         {
             if (data.Length <=0 || data.Length > MaxPacketSize)
             {
@@ -82,7 +84,8 @@ namespace FrameProtocol
             Memory<byte> buffer = _writer.GetMemory(totalSize);
             BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)data.Length);
             data.CopyTo(buffer.Slice(PacketLengthSize, data.Length));
-            ValueTask<FlushResult> result = _writer.FlushAsync(cancellation);
+            _writer.Advance(totalSize);
+            ValueTask<FlushResult> result = _writer.FlushAsync(token);
             return result.AsTask();
         }
     }

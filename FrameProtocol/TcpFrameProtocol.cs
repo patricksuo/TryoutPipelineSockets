@@ -77,7 +77,11 @@ namespace FrameProtocol
 
             while (!token.IsCancellationRequested)
             {
-                var n = await _socket.SendAsync(buffer, SocketFlags.None);
+                int n = await _socket.SendAsync(buffer, SocketFlags.None);
+                if (n == 0 )
+                {
+                    ThrowEOS();
+                }
                 sentCount += n;
                 if (sentCount == totalSize)
                 {
