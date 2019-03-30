@@ -54,7 +54,7 @@ namespace EchoServer
             }
 
             IPAddress address = IPAddress.Parse(options.Address);
-            EndPoint endpoint = new IPEndPoint(address, options.Port);
+            IPEndPoint endpoint = new IPEndPoint(address, options.Port);
 
             switch (options.testType)
             {

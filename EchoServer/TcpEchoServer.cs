@@ -30,7 +30,7 @@ namespace EchoServer
             {
                 while (!_cancel.IsCancellationRequested)
                 {
-                    var client = await lisenter.AcceptTcpClientAsync();
+                    TcpClient client = await lisenter.AcceptTcpClientAsync();
                     OnClientConnectedAsync(client);
                 }
             });
@@ -46,10 +46,18 @@ namespace EchoServer
                     while (true)
                     {
                         ReadOnlyMemory<byte> packet = await protocol.ReadAsync(_cancel.Token);
+                        if (packet.Length == 0)
+                        {
+                            return;
+                        }
                         await protocol.WriteAsync(packet);
                     }
                 }
                 catch (Exception) { }
+                finally
+                {
+                    client.Close();
+                }
             });
         }
     }
