@@ -11,7 +11,6 @@ namespace FrameProtocol
     {
         private readonly PipeReader _reader;
         private readonly PipeWriter _writer;
-        private readonly byte[] _headBuffer =new byte[PacketLengthSize];
 
         private Memory<byte> _buffer = new Memory<byte>(new byte[128]);
 
@@ -75,50 +74,16 @@ namespace FrameProtocol
 
         public override Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
         {
-            BinaryPrimitives.WriteUInt32LittleEndian(_headBuffer, (uint)data.Length);
-            ReadOnlyMemory<byte> head = _headBuffer;
-            WriteBuffer(in head, in data);
+            if (data.Length <=0 || data.Length > MaxPacketSize)
+            {
+                ThrowFrameSizeEx();
+            }
+            int totalSize = PacketLengthSize + data.Length;
+            Memory<byte> buffer = _writer.GetMemory(totalSize);
+            BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)data.Length);
+            data.CopyTo(buffer.Slice(PacketLengthSize, data.Length));
             ValueTask<FlushResult> result = _writer.FlushAsync(cancellation);
             return result.AsTask();
-        }
-
-        private void WriteBuffer(in ReadOnlyMemory<byte> head, in ReadOnlyMemory<byte> data)
-        {
-            int len = head.Length + data.Length;
-            if (len == 0 || len > MaxPacketSize)
-            {
-                ThrowFrameSizeEx();
-            }
-
-            int totalSize = PacketLengthSize + len;
-
-            Memory<byte> buffer = _writer.GetMemory(totalSize);
-
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)len);
-
-            head.CopyTo(buffer.Slice(PacketLengthSize));
-            data.CopyTo(buffer.Slice(PacketLengthSize + head.Length));
-
-            _writer.Advance(totalSize);
-        }
-
-        private void WriteBuffer(in ReadOnlyMemory<byte> data)
-        {
-            int bodyLen = data.Length;
-            if (bodyLen == 0 || bodyLen > MaxPacketSize)
-            {
-                ThrowFrameSizeEx();
-            }
-
-            int totalSize = PacketLengthSize + bodyLen;
-
-            Memory<byte> buffer = _writer.GetMemory(totalSize);
-
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)bodyLen);
-
-            data.CopyTo(buffer.Slice(PacketLengthSize));
-
-            _writer.Advance(totalSize);
         }
     }
 }
