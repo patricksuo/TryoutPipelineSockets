@@ -37,3 +37,7 @@ tags
 
 # Visual Studio 2015
 .vs/
+
+go_echo/client/client
+go_echo/server/server
+
