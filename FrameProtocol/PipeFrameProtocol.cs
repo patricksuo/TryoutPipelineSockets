@@ -7,18 +7,21 @@ using System.Threading.Tasks;
 
 namespace FrameProtocol
 {
-    public class PipeProtocol : FrameProtocol
+    public class PipeFrameProtocol : FrameProtocol
     {
         private readonly PipeReader _reader;
         private readonly PipeWriter _writer;
+        private readonly byte[] _headBuffer =new byte[PacketLengthSize];
 
-        public PipeProtocol(IDuplexPipe pipe)
+        private Memory<byte> _buffer = new Memory<byte>(new byte[128]);
+
+        public PipeFrameProtocol(IDuplexPipe pipe)
         {
             _reader = pipe.Input;
             _writer = pipe.Output;
         }
 
-        public PipeProtocol(PipeReader reader, PipeWriter writer)
+        public PipeFrameProtocol(PipeReader reader, PipeWriter writer)
         {
             _reader = reader;
             _writer = writer;
@@ -43,14 +46,15 @@ namespace FrameProtocol
             return true;
         }
 
-        public override async Task<(IMemoryOwner<byte>, uint)> ReadAsync(CancellationToken cancellation = default)
+
+        public override async Task<ReadOnlyMemory<byte>> ReadAsync(CancellationToken cancellation = default)
         {
-            while (true)
+            while (!cancellation.IsCancellationRequested)
             {
                 ReadResult result = await _reader.ReadAsync(cancellation);
                 if (result.IsCompleted || result.IsCanceled)
                 {
-                    return (null, 0);
+                    return default;
                 }
                 ReadOnlySequence<byte> buffer = result.Buffer;
 
@@ -61,23 +65,19 @@ namespace FrameProtocol
                 }
 
                 ReadOnlySequence<byte> body = buffer.Slice(PacketLengthSize, bodyLen);
-                IMemoryOwner<byte> buf = Pipelines.Sockets.Unofficial.Arenas.ArrayPoolAllocator<byte>.Shared.Allocate((int)bodyLen);
-                body.CopyTo(buf.Memory.Span);
+                IMemoryOwner<byte> buf = MemoryPool<byte>.Shared.Rent((int)bodyLen);
+                body.CopyTo(_buffer.Span.Slice(0,(int)bodyLen));
                 _reader.AdvanceTo(body.End);
-                return (buf, bodyLen);
+                return _buffer.Slice(0, (int)bodyLen);
             }
-        }
-
-        public Task WriteAsync(ReadOnlyMemory<byte> head, ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
-        {
-            WriteBuffer(in head, in data);
-            ValueTask<FlushResult> result = _writer.FlushAsync(cancellation);
-            return result.AsTask();
+            return default;
         }
 
         public override Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
         {
-            WriteBuffer(in data);
+            BinaryPrimitives.WriteUInt32LittleEndian(_headBuffer, (uint)data.Length);
+            ReadOnlyMemory<byte> head = _headBuffer;
+            WriteBuffer(in head, in data);
             ValueTask<FlushResult> result = _writer.FlushAsync(cancellation);
             return result.AsTask();
         }

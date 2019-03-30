@@ -7,17 +7,18 @@ using System.Threading.Tasks;
 
 namespace FrameProtocol
 {
-    public class TcpProtocol : FrameProtocol
+    public class TcpFrameProtocol : FrameProtocol
     {
         private readonly Socket _socket;
-        private readonly MemoryPool<byte> allocator = MemoryPool<byte>.Shared;
+        private readonly Memory<byte> _headBuffer = new Memory<byte>( new byte[PacketLengthSize]);
+        private Memory<byte> _buffer = new Memory<byte>(new byte[128]);
 
-        public TcpProtocol(Socket socket)
+        public TcpFrameProtocol(Socket socket)
         {
             _socket = socket;
         }
 
-        private async Task readFull(Memory<byte> buffer, CancellationToken cancellation)
+        private async Task ReadFull(Memory<byte> buffer, CancellationToken cancellation)
         {
             var count = buffer.Length;
             while (count > 0)
@@ -25,31 +26,36 @@ namespace FrameProtocol
                 var n = await _socket.ReceiveAsync(buffer, SocketFlags.None, cancellation);
                 if (n == 0)
                 {
-                    throw new Exception("Remote Close the Socket");
+                    ThrowEOS();
                 }
                 count -= n;
                 buffer = buffer.Slice(n);
             }
         }
 
-        public override async Task<(IMemoryOwner<byte>, uint)> ReadAsync(CancellationToken cancellation)
+        public override async Task<ReadOnlyMemory<byte>> ReadAsync(CancellationToken token=default)
         {
-            while (true)
+            while(!token.IsCancellationRequested)
             {
-                var headBuf = allocator.Rent(PacketLengthSize);
-                var head = headBuf.Memory.Slice(0, PacketLengthSize);
-                await readFull(head, cancellation);
-                var bodyLen = BinaryPrimitives.ReadUInt32LittleEndian(head.Span);
-                headBuf.Dispose();
+                await ReadFull(_headBuffer, token);
+                int bodyLen = (int)BinaryPrimitives.ReadUInt32LittleEndian(_headBuffer.Span);
+                if (bodyLen <=0 || bodyLen > MaxPacketSize)
+                {
+                    ThrowFrameSizeEx();
+                }
 
-                var bodyBuf = MemoryPool<byte>.Shared.Rent((int)bodyLen);
-                var body = bodyBuf.Memory.Slice(0, (int)bodyLen);
-                await readFull(body, cancellation);
-                return (bodyBuf, bodyLen);
+                if (_buffer.Length < bodyLen)
+                {
+                    _buffer = new Memory<byte>(new byte[bodyLen]);
+                }
+
+                await ReadFull(_buffer.Slice(0, bodyLen), token);
+                return _buffer.Slice(0, bodyLen);
             }
+            return default;
         }
 
-        public override async Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
+        public  override async Task WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellation = default)
         {
             int bodyLen = data.Length;
             if (bodyLen == 0 || bodyLen > MaxPacketSize)
@@ -58,7 +64,7 @@ namespace FrameProtocol
             }
 
             int totalSize = PacketLengthSize + bodyLen;
-            var imo = MemoryPool<byte>.Shared.Rent(totalSize);
+            IMemoryOwner<byte> imo = MemoryPool<byte>.Shared.Rent(totalSize);
             Memory<byte> buffer = imo.Memory.Slice(0, totalSize);
             BinaryPrimitives.WriteUInt32LittleEndian(buffer.Span, (uint)bodyLen);
             data.CopyTo(buffer.Slice(PacketLengthSize));

@@ -46,13 +46,13 @@ namespace EchoClient
                 case TestType.Pipeline:
                     _stopwatch.Start();
                     conn = await SocketConnection.ConnectAsync(_server);
-                    _protocol = new PipeProtocol(conn.Input, conn.Output);
+                    _protocol = new PipeFrameProtocol(conn.Input, conn.Output);
                     break;
                 case TestType.TcpSocket:
                     client = new TcpClient();
                     _stopwatch.Start();
                     await client.ConnectAsync(((IPEndPoint)_server).Address, ((IPEndPoint)_server).Port);
-                    _protocol = new TcpProtocol(client.Client);
+                    _protocol = new TcpFrameProtocol(client.Client);
                     break;
             }
 
@@ -67,15 +67,12 @@ namespace EchoClient
                     Interlocked.Increment(ref s_writeBeginCnt);
                     await _protocol.WriteAsync(_payload);
                     Interlocked.Increment(ref s_writeFinishCnt);
-                    (var imo, var len) = await _protocol.ReadAsync();
-                    Interlocked.Increment(ref s_readFinishCnt);
-                    using (imo)
+                    ReadOnlyMemory<byte> buffer = await _protocol.ReadAsync();
+                    if (buffer.Length == 0)
                     {
-                        if (len != _payload.Length)
-                        {
-                            throw new Exception("unexpect echo result");
-                        }
+                        return;
                     }
+                    Interlocked.Increment(ref s_readFinishCnt);
                 }
                 EchoDuration = _stopwatch.Elapsed;
             }

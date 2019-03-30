@@ -15,20 +15,17 @@ namespace EchoServer
 
         private async Task Echo(IDuplexPipe transport)
         {
-            var protocol = new PipeProtocol(transport);
+            PipeFrameProtocol protocol = new PipeFrameProtocol(transport);
             try
             {
                 while (true)
                 {
-                    (var buffer, var len) = await protocol.ReadAsync();
-                    if (len == 0)
+                    ReadOnlyMemory<byte> packet = await protocol.ReadAsync();
+                    if (packet.Length == 0)
                     {
                         return;
                     }
-                    using (buffer)
-                    {
-                        await protocol.WriteAsync(buffer.Memory.Slice(0, (int)len));
-                    }
+                    await protocol.WriteAsync(packet);
                 }
             }
             catch (Exception)

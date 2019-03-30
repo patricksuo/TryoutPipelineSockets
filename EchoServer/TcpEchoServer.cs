@@ -10,7 +10,7 @@ namespace EchoServer
     public class TcpEchoServer
     {
         private TcpListener lisenter;
-        private CancellationTokenSource cancel = new CancellationTokenSource();
+        private CancellationTokenSource _cancel = new CancellationTokenSource();
 
         public void Listen(IPEndPoint ep, int backlog = 10000)
         {
@@ -21,14 +21,14 @@ namespace EchoServer
 
         public void Stop()
         {
-            cancel.Cancel();
+            _cancel.Cancel();
         }
 
         private void acceptLoop()
         {
             Task.Run(async () =>
             {
-                while (!cancel.IsCancellationRequested)
+                while (!_cancel.IsCancellationRequested)
                 {
                     var client = await lisenter.AcceptTcpClientAsync();
                     OnClientConnectedAsync(client);
@@ -40,13 +40,13 @@ namespace EchoServer
         {
             Task.Run(async () =>
             {
-                var protocol = new TcpProtocol(client.Client);
+                var protocol = new TcpFrameProtocol(client.Client);
                 try
                 {
                     while (true)
                     {
-                        (var buffer, var len) = await protocol.ReadAsync(cancel.Token);
-                        await protocol.WriteAsync(buffer.Memory.Slice(0, (int)len));
+                        ReadOnlyMemory<byte> packet = await protocol.ReadAsync(_cancel.Token);
+                        await protocol.WriteAsync(packet);
                     }
                 }
                 catch (Exception) { }
