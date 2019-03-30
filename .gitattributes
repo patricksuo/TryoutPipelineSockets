@@ -69,3 +69,5 @@
 .gitignore eol=lf
 .editorconfig eol=lf
 *.md eol=lf
+*.sln eol=crlf
+*.csproj eol=crlf
