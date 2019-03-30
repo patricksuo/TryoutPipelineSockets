@@ -67,7 +67,7 @@ namespace EchoServer
                 case TestType.TcpSocket:
                     {
                         TcpEchoServer server = new TcpEchoServer();
-                        server.Listen((IPEndPoint)endpoint, 5000);
+                        server.Listen(endpoint, 5000);
                     }
                     break;
             }

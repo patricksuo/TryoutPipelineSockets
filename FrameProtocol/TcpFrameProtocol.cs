@@ -15,6 +15,7 @@ namespace FrameProtocol
 
         public TcpFrameProtocol(Socket socket)
         {
+            socket.NoDelay = true;
             _socket = socket;
         }
 
