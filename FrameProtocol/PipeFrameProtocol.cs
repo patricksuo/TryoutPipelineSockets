@@ -66,7 +66,6 @@ namespace FrameProtocol
                 }
 
                 ReadOnlySequence<byte> body = buffer.Slice(PacketLengthSize, bodyLen);
-                IMemoryOwner<byte> buf = MemoryPool<byte>.Shared.Rent((int)bodyLen);
                 body.CopyTo(_buffer.Span.Slice(0,(int)bodyLen));
                 _reader.AdvanceTo(body.End);
                 return _buffer.Slice(0, (int)bodyLen);
