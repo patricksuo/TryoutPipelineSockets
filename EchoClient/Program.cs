@@ -42,6 +42,10 @@ namespace EchoClient
         [Option('t', "type", Default = TestType.Pipeline, HelpText = "test type")]
         public TestType TransportType { get; set; }
 
+
+        [Option('w', "warnup", Default = 0, HelpText = "warnup round")]
+        public int WarnupRound { get; set; }
+
         public static Options s_Current;
     }
 
@@ -79,6 +83,17 @@ namespace EchoClient
 
             IPAddress address = IPAddress.Parse(options.Address);
             EndPoint endpoint = new IPEndPoint(address, options.Port);
+
+            if (options.WarnupRound > 0)
+            {
+                Task[] warnupTask = new Task[options.WarnupRound];
+                for (int i = 0; i < options.WarnupRound; i++)
+                {
+                    EchoClient client = new EchoClient(endpoint, options.Rounds, payload);
+                    warnupTask[i] = client.Start(options.TransportType);
+                }
+                Task.WaitAll(warnupTask);
+            }
 
             for (int i = 0; i < options.Clients; i++)
             {
