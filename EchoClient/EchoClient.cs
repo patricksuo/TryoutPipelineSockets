@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -28,6 +29,12 @@ namespace EchoClient
         public static long s_writeFinishCnt;
         public static long s_readFinishCnt;
 
+        private static readonly PipeOptions s_pipeOptions = 
+        new PipeOptions(readerScheduler: PipeScheduler.Inline,
+            writerScheduler: PipeScheduler.Inline,
+            minimumSegmentSize: 512
+                );
+
         public EchoClient(EndPoint server, int echoRound, byte[] payload)
         {
             _server = server;
@@ -45,7 +52,7 @@ namespace EchoClient
             {
                 case TestType.Pipeline:
                     _stopwatch.Start();
-                    conn = await SocketConnection.ConnectAsync(_server);
+                    conn = await SocketConnection.ConnectAsync(_server,pipeOptions: s_pipeOptions);
                     _protocol = new PipeFrameProtocol(conn.Input, conn.Output);
                     break;
                 case TestType.TcpSocket:
